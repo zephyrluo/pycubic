@@ -4,7 +4,7 @@ Constuction of 3D cubic help us learn to play cubic game.
 <image src="cubic.png"/>
 
 # Requirement:
-*python 2.7*
+*python 2.7*<br/>
 *pip*
 
 # Install dependency:
