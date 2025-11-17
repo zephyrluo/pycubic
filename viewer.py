@@ -16,11 +16,11 @@ from OpenGL.GLUT import *
 #                        GLUT_SINGLE, GLUT_RGB, GLUT_WINDOW_HEIGHT, GLUT_WINDOW_WIDTH
 
 import numpy
-import sys
+import sys,os
 import copy
 import select
 from numpy.linalg import norm, inv
-from threading import Timer
+from threading import Timer, Thread
 
 try:
     import queue
@@ -34,15 +34,15 @@ from node import Sphere, Cube, SnowFigure, HierarchicalNode, Q, textOut
 from scene import Scene
 
 twmap = {
-        0: ([ 0,  1,  2,  3,  4,  5,  6,  7,  8],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), 
-        1: ([ 9, 10, 11, 12, 13, 14, 15, 16, 17],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), 
-        2: ([18, 19, 20, 21, 22, 23, 24, 25, 26],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), 
-        3: ([ 0,  1,  2,  9, 10, 11, 18, 19, 20],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]), 
-        4: ([ 3,  4,  5, 12, 13, 14, 21, 22, 23],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]), 
-        5: ([ 6,  7,  8, 15, 16, 17, 24, 25, 26],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]), 
-        6: ([ 0,  3,  6,  9, 12, 15, 18, 21, 24],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]), 
-        7: ([ 1,  4,  7, 10, 13, 16, 19, 22, 25],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]), 
-        8: ([ 2,  5,  8, 11, 14, 17, 20, 23, 26],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]), 
+        0: ([ 0,  1,  2,  3,  4,  5,  6,  7,  8],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]),
+        1: ([ 9, 10, 11, 12, 13, 14, 15, 16, 17],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]),
+        2: ([18, 19, 20, 21, 22, 23, 24, 25, 26],  [0.0, 0.0,  0.0314, 1.0],  [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]),
+        3: ([ 0,  1,  2,  9, 10, 11, 18, 19, 20],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]),
+        4: ([ 3,  4,  5, 12, 13, 14, 21, 22, 23],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]),
+        5: ([ 6,  7,  8, 15, 16, 17, 24, 25, 26],  [0.0, -0.0314, 0.0, 1.0],  [[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]),
+        6: ([ 0,  3,  6,  9, 12, 15, 18, 21, 24],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]),
+        7: ([ 1,  4,  7, 10, 13, 16, 19, 22, 25],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]),
+        8: ([ 2,  5,  8, 11, 14, 17, 20, 23, 26],  [ 0.0314, 0.0, 0.0, 1.0],  [[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]),
         }
 
 twplan = {
@@ -57,9 +57,9 @@ twplan = {
         8: [[(1,0,3),(0,0,3),(3,8,-3),(5,0,3)],[(4,0,1)]],
         }
 
-tips=[  [-2, -1.2, 1.5, '6'], [-2, -0.2, 1.5, '5'], [-2, 0.8, 1.5, '4'], 
-        [-1.2, -2, 1.5, '9'], [-0.2, -2, 1.5, '8'], [0.8, -2, 1.5, '7'], 
-        [-2, 1.5, -1.0, '3'], [-2, 1.5, 0., '2'], [-2, 1.5, 1, '1'], 
+tips=[  [-2, -1.2, 1.5, '6'], [-2, -0.2, 1.5, '5'], [-2, 0.8, 1.5, '4'],
+        [-1.2, -2, 1.5, '9'], [-0.2, -2, 1.5, '8'], [0.8, -2, 1.5, '7'],
+        [-2, 1.5, -1.0, '3'], [-2, 1.5, 0., '2'], [-2, 1.5, 1, '1'],
         ]
 
 STYLE = {
@@ -104,9 +104,9 @@ STYLE = {
         }
 
 def UseStyle(string, mode = '', fore = '', back = ''):
-    mode  = '%s' % STYLE['mode'][mode] if STYLE['mode'].has_key(mode) else ''
-    fore  = '%s' % STYLE['fore'][fore] if STYLE['fore'].has_key(fore) else ''
-    back  = '%s' % STYLE['back'][back] if STYLE['back'].has_key(back) else ''
+    mode  = '%s' % STYLE['mode'][mode] if mode in STYLE['mode'] else ''
+    fore  = '%s' % STYLE['fore'][fore] if fore in STYLE['fore'] else ''
+    back  = '%s' % STYLE['back'][back] if back in STYLE['back'] else ''
     style = ';'.join([s for s in [mode, fore, back] if s])
     style = '\033[%sm' % style if style else ''
     end  = '\033[%sm' % STYLE['default']['end'] if style else ''
@@ -127,12 +127,13 @@ class Viewer(object):
         self.init_interaction()
         init_primitives()
         self.Q = queue.Queue()
+        self.quit = False
 
     def init_interface(self):
         """ initialize the window and register the render function """
-        glutInit()
+        glutInit(sys.argv)
         glutInitWindowSize(1000, 600)
-        glutCreateWindow("魔方求解")
+        glutCreateWindow(b"Rubik Cube Solver")
         glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
         glutDisplayFunc(self.render)
 
@@ -157,12 +158,12 @@ class Viewer(object):
     def initRubic(self):
         self.anim=0
         self.rotateCnt=0
-        self.boxMap=[i for i in xrange(27)]
+        self.boxMap=[i for i in range(27)]
         self.plane=[]
         self.cmdbuf=[]
-        for i in xrange(6):
+        for i in range(6):
             self.plane.append([])
-            for j in xrange(3):
+            for j in range(3):
                 self.plane[i].append([i]*3)
 
     def init_scene(self):
@@ -171,22 +172,23 @@ class Viewer(object):
         self.outStr = ''
         #self.create_sample_scene()
         self.loadScene('rubic.json')
-        
+
 
     def loadScene(self, fn):
-        scencedat = json.load(file(fn)) 
+        with open(fn) as f:
+            scencedat = json.load(f)
         scencedat['node'].reverse()
         self.rubic=[]
         self.planmap = {}
 
         for ind, nodedat in enumerate(scencedat['node']):
             node = HierarchicalNode()
-            node.translate(nodedat['pos'][0], nodedat['pos'][1], nodedat['pos'][2]) 
-            for i in xrange(6):
+            node.translate(nodedat['pos'][0], nodedat['pos'][1], nodedat['pos'][2])
+            for i in range(6):
                 subnode=Q(i)
                 subnode.ind = ind
                 #subnode.showind=i+1
-                if nodedat['col'][i] >= 6: 
+                if nodedat['col'][i] >= 6:
                     subnode.no4back=1
 
                 subnode.color_index = nodedat['col'][i]
@@ -232,7 +234,19 @@ class Viewer(object):
         self.interaction.register_callback('rotate_color', self.rotate_color)
         self.interaction.register_callback('scale', self.scale)
 
+    def input_thread(self):
+        while True:
+            try:
+                # 这会阻塞，直到用户输入并按下回车
+                cmd = input()
+                self.Q.put(cmd)
+            except EOFError:
+                # 如果标准输入关闭，则退出循环
+                break
     def main_loop(self):
+        thread = Thread(target=self.input_thread)
+        thread.daemon = True
+        thread.start()
         glutMainLoop()
 
     def render(self):
@@ -293,7 +307,7 @@ class Viewer(object):
         glPopMatrix()
 
         if self.outStr:
-            textOut(-6.0, 3.0, 0, this.outStr)
+            textOut(-6.0, 3.0, 0, self.outStr)
 
         # flush the buffers so that the scene can be drawn
         glFlush()
@@ -313,14 +327,21 @@ class Viewer(object):
         glutIdleFunc(self.idleFn)
 
     def idleFn(self):
-        if select.select([sys.stdin,],[],[],0.0)[0]:
-            cmds=raw_input()
-            if len(cmds)>1 and cmds[0] in 'ip':
-                self.cmd(cmds, 0 ,0)
+        if self.quit:
+            os._exit(0)
+        # 检查队列中是否有命令
+        try:
+            cmd = self.Q.get_nowait()
+            if len(cmd)>1 and cmd[0] in 'ip':
+                self.cmd(cmd, 0 ,0)
                 return
-            if len(cmds)>0:
-                self.cmdbuf.extend(list(cmds))
+            if len(cmd)>0:
+                self.cmdbuf.extend(list(cmd))
                 self.cmd(self.cmdbuf.pop(0), 0, 0)
+        except queue.Empty:
+            pass # 队列为空，什么都不做
+        except KeyboardInterrupt:
+            os._exit(0)
 
     def get_ray(self, x, y):
         """ Generate a ray beginning at the near , in the direction that the x, y coordinates are facing
@@ -354,17 +375,21 @@ class Viewer(object):
                     self.setPlane(pind, rowind, col, int(v))
 
     def cmd(self, key, x, y):
+        if isinstance(key, bytes):
+            key = key.decode('utf-8')
+        elif isinstance(key, int):
+            key = chr(key)
         rotmap='!@#$%^&*('
         if key >= '1' and key <= '9':
             self.twistFace(ord(key)-ord('1'), self.anim, 0)
         elif key in rotmap:
             self.twistFace(rotmap.find(key), self.anim, 1)
         if key == 'q':
-            exit(0)
+            self.quit = True
         if key[0] == 'i':
             self.setbox(key[1:])
             self.dumpRubic()
-        if key[0]=='p' and len(key)>=5:    
+        if key[0]=='p' and len(key)>=5:
             self.setPlane(int(key[1]), int(key[2]), int(key[3]), int(key[4]))
         if key == 'c':
             self.rubic = []
@@ -373,7 +398,8 @@ class Viewer(object):
             self.initRubic()
         if key==' ':
             import resolve
-            reload(resolve)
+            import importlib
+            importlib.reload(resolve)
             dupplan = copy.copy(self.plane)
             cmds = resolve.run(dupplan, self.adjustPlan)
             for c in cmds:
@@ -386,8 +412,8 @@ class Viewer(object):
             self.anim = 0 if key == 'A' else 1
         if key == 'r':
             import random
-            for i in xrange(80):
-                self.twistFace(int(random.random()*9), 1, 0)
+            for i in range(80):
+                self.twistFace(int(random.random() * 9), 1, 0)
         glutPostRedisplay()
 
     def rotateFn(self):
@@ -396,63 +422,63 @@ class Viewer(object):
         self.rotateCnt += 1
 
     def dumpFace(self, face):
-        outstr=''
-        for v in xrange(3):
-            outstr+=coltxt(" %d "%face[v], 41+face[v])
-        print outstr,
+        outstr = ""
+        for v in range(3):
+            outstr += coltxt(" %d " % face[v], 41 + face[v])
+        print(outstr, end="")
 
     def dumpRubic(self):
-        print '---'*3
-        for j in xrange(3):
+        print("---" * 3)
+        for j in range(3):
             self.dumpFace(self.plane[0][j])
-            print
-        print
-        for j in xrange(3):
-            for v in xrange(1,5):
+            print("")
+        print("")
+        for j in range(3):
+            for v in range(1, 5):
                 self.dumpFace(self.plane[v][j])
-            print
-        print
+            print("")
+        print("")
             #    UseStyle("%d"%self.plane[1][j][v], back='red')
             #print self.plane[1][j], self.plane[2][j], self.plane[3][j], self.plane[4][j]
-        for j in xrange(3):
+        for j in range(3):
             self.dumpFace(self.plane[5][j])
-            print 
+            print("")
             #print self.plane[5][j]
 
-        print '==='*3
+        print("=" * 9)
         return
 
-        for i in xrange(1,5):
-            for j in xrange(3):
-                print self.plane[i][j]
-            print '==='*3
-        print '---'*3
+        for i in range(1,5):
+            for j in range(3):
+                print(self.plane[i][j])
+            print('==='*3)
+        print('---'*3)
         return
-        for i in xrange(3):
-            print '--'*5
-            for j in xrange(3):
-                for k in xrange(3):
-                    print '%2d'%self.boxMap[k+j*3+9*i],
-                print 
-        print '=='*6
+        for i in range(3):
+            print('--'*5)
+            for j in range(3):
+                for k in range(3):
+                    print("%2d" % self.boxMap[k + j * 3 + 9 * i], end="")
+                print("")
+        print("=" * 12)
 
     def tranf(self, idlst, pf, tbl):
-        tmp = idlst[pf[0]][tbl[0]/3][tbl[0]%3] 
-        for i in xrange(len(tbl)-1):
-            idlst[pf[i]][tbl[i]/3][tbl[i]%3] = idlst[pf[i+1]][tbl[i+1]/3][tbl[i+1]%3]
-        idlst[pf[-1]][tbl[-1]/3][tbl[-1]%3] = tmp
+        tmp = idlst[pf[0]][tbl[0] // 3][tbl[0] % 3]
+        for i in range(len(tbl) - 1):
+            idlst[pf[i]][tbl[i] // 3][tbl[i] % 3] = idlst[pf[i+1]][tbl[i+1] // 3][tbl[i+1] % 3]
+        idlst[pf[-1]][tbl[-1] // 3][tbl[-1] % 3] = tmp
 
     def adjustPlan(self, plan, rotInd,  reverse):
         planscroll, planrot = twplan[rotInd]
         pf = [planscroll[0][0], planscroll[1][0], planscroll[2][0], planscroll[3][0]]
         if reverse:
             pf.reverse()
-        for i in xrange(3):
+        for i in range(3):
             ri = [planscroll[0][1]+i*planscroll[0][2], planscroll[1][1]+i*planscroll[1][2], planscroll[2][1]+i*planscroll[2][2], planscroll[3][1]+i*planscroll[3][2]]
             if reverse:
                 ri.reverse()
             self.tranf(plan, pf, ri)
-        
+
         if len(planrot) == 0: return
 
         pf = [planrot[0][0]]*4
@@ -480,26 +506,26 @@ class Viewer(object):
         ri = [6, 8, 2, 0]
         if reverse:
             ri.reverse()
-        tmp = self.boxMap[rot[ri[0]]] 
-        for i in xrange(len(ri)-1):
+        tmp = self.boxMap[rot[ri[0]]]
+        for i in range(len(ri) - 1):
             self.boxMap[rot[ri[i]]] = self.boxMap[rot[ri[i+1]]]
         self.boxMap[rot[ri[-1]]] = tmp
-        #print
+        # print("")
         ri = [3, 7, 5, 1]
         if reverse:
             ri.reverse()
-        tmp = self.boxMap[rot[ri[0]]] 
-        for i in xrange(len(ri)-1):
+        tmp = self.boxMap[rot[ri[0]]]
+        for i in range(len(ri) - 1):
             self.boxMap[rot[ri[i]]] = self.boxMap[rot[ri[i+1]]]
         self.boxMap[rot[ri[-1]]] = tmp
-        
+
         self.adjustPlan(self.plane, self.rotateInd, reverse)
         self.dumpRubic()
         if len(self.cmdbuf)>0:
             self.cmd(self.cmdbuf.pop(0), 0, 0)
 
     def animStep(self, reverse):
-        if self.rotateCnt > 0: 
+        if self.rotateCnt > 0:
             self.rotateFn()
             glutPostRedisplay()
             if self.rotateCnt > 25:
@@ -516,12 +542,12 @@ class Viewer(object):
         self.rotateTarget = []
 
         for bi in twmap[ind][0]:
-            self.rotateTarget.append(self.boxMap[bi]) 
-        print ' %s '%(['↩️ ..', '.↩️ .', '..↩️ ', '⬅️ ..', '.⬅️ .', '..⬅️ ', '..⬆️ ', '.⬆️ .', '⬆️  ..'][ind] 
-                if reverse else ['↪️ ..', '.↪️ .', '..↪️ ', '➡️ ..', '.➡️ .', '..➡️ ', '..⬇️ ', '.⬇️ .', '⬇️  ..'][ind] )
+            self.rotateTarget.append(self.boxMap[bi])
+        print((' %s '%(['↩️ ..', '.↩️ .', '..↩️ ', '⬅️ ..', '.⬅️ .', '..⬅️ ', '..⬆️ ', '.⬆️ .', '⬆️  ..'][ind]
+                if reverse else ['↪️ ..', '.↪️ .', '..↪️ ', '➡️ ..', '.➡️ .', '..➡️ ', '..⬇️ ', '.⬇️ .', '⬇️  ..'][ind] )))
         for i in self.rotateTarget:
             self.rubic[i].translation_matrix0 = self.rubic[i].translation_matrix
-    
+
         if noAnim:
             self.adjust(reverse)
         else:

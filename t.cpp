@@ -16,9 +16,9 @@ using namespace std;
 #define Ci cubelet _I ].
 #define FOR_RET2 ret += ret +
 #define _IF if (
-string data = "2#6'&78)5+1/AT[NJ_PERLQO@IAHPNSMBJCKLRMSDHEJNPOQFKGIQLSNF@DBROPMAGCEMPOACSRQDF";
+string dt = "2#6'&78)5+1/AT[NJ_PERLQO@IAHPNSMBJCKLRMSDHEJNPOQFKGIQLSNF@DBROPMAGCEMPOACSRQDF";
 char inva _48_, b _48_, cur_phase, search_mode, history_idx, history_mov _48_, history_rpt _48_, depth_to_go[5 SH __LINE__], hash_table _48_[6912];
-#define PA cubelet[64^data[20+cur_phase*8+i
+#define PA cubelet[64^dt[20+cur_phase*8+i
 struct Cubelet { char pos, twi _G cubelet _48_;
 #define PB ]]
 void rot(char cur_phase _Q
@@ -145,7 +145,7 @@ int main(int, char** arg _Q
 	memset(hash_table, 6, sizeof(hash_table) _E
 	FOR_i Ci pos = i		FOR_cur_phase 		do_search(0 _E	FOR_i {
 		string s = arg _I +1] + string("!" _E
-		Ci pos = data.find(s[0] ^ s[1] ^ s[2] _E
+		Ci pos = dt.find(s[0] ^ s[1] ^ s[2] _E
 		int x = min(s.find(85), s.find(68) _E
 		Ci twi = ~x ? x : s[0]>70
 	_G
